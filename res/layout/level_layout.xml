@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/level_layout"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" 
+    android:background="@drawable/wood_floor" >
+
+    <ImageView
+        android:id="@+id/imageViewStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="208dp" />
+
+    <Button
+        android:id="@+id/startAnimationBtn"
+        android:layout_width="@dimen/optionOkCancelWidth"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="86dp"
+        android:text="Start Level" />
+
+    <TextView
+        android:id="@+id/timerText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="300dp"
+        android:text="" 
+        android:textSize="25dip"
+        android:textColor="#000000"/>
+    
+    <TextView
+        android:id="@+id/stepsTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:layout_below="@+id/timerText"
+		android:layout_centerHorizontal="true"
+        android:text="" 
+        android:textSize="25dip"
+        android:textColor="#000000"/>
+    
+    <TextView
+        android:id="@+id/instrucTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:layout_below="@+id/stepsTextView"
+		android:layout_centerHorizontal="true"
+        android:text="" 
+        android:textSize="25dip"
+        android:textColor="#000000"/>
+    
+    
+    
+</RelativeLayout>

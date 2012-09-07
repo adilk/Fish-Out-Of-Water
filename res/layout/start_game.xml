@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" 
+    android:background="@drawable/underwater_background" >
+
+     <TextView
+         android:id="@+id/gameTitle"
+         android:layout_width="fill_parent"
+         android:layout_height="wrap_content"
+         android:layout_alignParentLeft="true"
+         android:layout_alignParentTop="true"
+         android:layout_marginTop="19dp"
+         android:gravity="center_horizontal"
+         android:text="@string/gameTitle"
+         android:textColor="#000000"
+         android:textSize="40dip" />
+
+     <Button
+         android:id="@+id/onePlayer"
+         android:layout_width="130dip"
+         android:layout_height="wrap_content"
+         android:layout_below="@+id/gameTitle"
+         android:layout_centerHorizontal="true"
+         android:layout_marginTop="50dp"
+         android:onClick="goToOnePlayerGame"
+         android:text="@string/onePlayerBtn" 
+         android:textSize="25dip" />
+
+</RelativeLayout>

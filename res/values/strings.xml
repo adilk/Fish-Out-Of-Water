@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="gameTitle">Fish Out \nof \nWater</string>
+    <string name="app_name">FishOutOfWater</string>
+    <string name="onePlayerBtn">Play</string>
+    <string name="okText">OK</string>
+    <string name="cancelText">Cancel</string>
+
+</resources>
