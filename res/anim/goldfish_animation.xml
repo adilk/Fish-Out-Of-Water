@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <animation-list xmlns:android="http://schemas.android.com/apk/res/android" >
-    <item android:drawable="@drawable/fishbowl_goldie" android:duration="500" />
-    <item android:drawable="@drawable/fishbowl_goldie_jump" android:duration="500" />
-    <item android:drawable="@drawable/fishbowl_goldie_out" android:duration="600" />
-    <item android:drawable="@drawable/fishbowl_goldie_floor" android:duration="600" />
+    <item android:drawable="@drawable/animate_goldie1" android:duration="500" />
+    <item android:drawable="@drawable/animate_goldie2" android:duration="500" />
+    <item android:drawable="@drawable/animate_goldie3" android:duration="600" />
+    <item android:drawable="@drawable/animate_goldie4" android:duration="600" />
+    <item android:drawable="@drawable/pregame_goldie1" android:duration="400" />
+    <item android:drawable="@drawable/pregame_goldie2" android:duration="400" />
+    <item android:drawable="@drawable/pregame_goldie3" android:duration="400" />
+    <item android:drawable="@drawable/pregame_goldie4" android:duration="400" />
+    <item android:drawable="@drawable/pregame_goldie5" android:duration="400" />
 </animation-list>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<animation-list xmlns:android="http://schemas.android.com/apk/res/android" >
-    <item android:drawable="@drawable/fishbowl_greenfish" android:duration="500" />
-    <item android:drawable="@drawable/fishbowl_greenfish_jump" android:duration="500" />
-    <item android:drawable="@drawable/fishbowl_greenfish_out" android:duration="600" />
-    <item android:drawable="@drawable/fishbowl_greenfish_floor" android:duration="600" />
-</animation-list>

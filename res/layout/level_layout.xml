@@ -3,7 +3,7 @@
     android:id="@+id/level_layout"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" 
-    android:background="@drawable/wood_floor" >
+    android:background="@drawable/animate_goldie1" >
 
     <ImageView
         android:id="@+id/imageViewStart"
@@ -15,12 +15,13 @@
 
     <Button
         android:id="@+id/startAnimationBtn"
-        android:layout_width="@dimen/optionOkCancelWidth"
+        android:layout_width="@dimen/optionButtonWidth"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="86dp"
-        android:text="Start Level" />
+        android:text="@string/startLevel" 
+        android:textSize="@dimen/optionButtonTextSize" />
 
     <TextView
         android:id="@+id/timerText"

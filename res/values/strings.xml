@@ -6,5 +6,7 @@
     <string name="onePlayerBtn">Play</string>
     <string name="okText">OK</string>
     <string name="cancelText">Cancel</string>
+    <string name="startLevel">Start Level</string>
+    <string name="congrats">Congratulations! \nYou have completed the game!</string>
 
 </resources>

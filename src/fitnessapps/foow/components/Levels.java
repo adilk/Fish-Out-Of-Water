@@ -5,9 +5,11 @@ import java.util.Random;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.app.ActivityManager.RunningServiceInfo;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.drawable.AnimationDrawable;
@@ -26,16 +28,18 @@ import android.widget.Button;
 import android.widget.TextView;
 import fitnessapps.acceltest.activity.IAccelRemoteService;
 import fitnessapps.foow.activity.R;
-import fitnessapps.foow.activity.StartGameActivity;
 import fitnessapps.foow.data.AccelerometerData;
+import fitnessapps.foow.data.GlobalState;
 
 public abstract class Levels extends Activity implements SensorEventListener {
 
-	private SoundPool pool;
+	private SoundPool pool = null;
 	private MyTimer countDownTimer;
 	private TextView timerTextView;
 	private TextView instrucTextView;
+	private View currentView;
 	private Button startButton;
+	// Animation and Audio
 	private int drawableID = R.anim.goldfish_animation;
 	private int beginSplash;
 	private int endSplash;
@@ -44,15 +48,16 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	private int turnRight;
 	private int turnLeft;
 	private int turnAround;
-
-	private int pointsForLevel;
-	private int level_number;
+	private int walkPrompt;
+	// Level Characteristics
+	private int pointsForLevel = 10;
 	private int numOfObstacles;
-	private int score;
 	private int numOfSteps;
 	private int winningSteps;
+	private boolean isLastLevel;
+	private boolean endOfLevel;
 	private int[] obstacleAtSteps;
-
+	// Sensors
 	private SensorManager sensorManager;
 	private Sensor sensorAccelerometer;
 	private Sensor sensorMagneticField;
@@ -66,7 +71,10 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	private ArrayList<AccelerometerData> accelerationSamples;
 	private AccelerometerData prev;
 	private double azimuth;
-	private TextView stepView;
+	// private TextView stepView;
+	private Intent currentIntent;
+	private Intent previousIntent;
+	private Intent introIntent;
 
 	private boolean isObstacleCleared;
 	private String preObstacleDir = "";
@@ -84,16 +92,21 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	private static final int OB_TURN_LEFT = 1;
 	private static final int OB_TURN_RIGHT = 2;
 	private static final int OB_TURN_AROUND = 3;
+	private static final int LAST_LEVEL = 15;
 
 	private RemoteServiceConnection conn;
 	private IAccelRemoteService remoteService;
 
 	public void gameStart() {
-		registerListeners();
+		pool.play(walkPrompt, 1, 1, 1, 0, 1);
 		numOfSteps = 0;
+		endOfLevel = false;
 		initRunTextView();
 		initObstacles();
-		if (isAccelServiceRunning()) { bindService(); }
+		registerListeners();
+		if (isAccelServiceRunning()) {
+			bindService();
+		}
 		countDownTimer.start();
 	}
 
@@ -116,17 +129,18 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		}
 	}
 
-	
-	 private boolean isAccelServiceRunning() { 
-		 ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE); 
-		 for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) { 
-			 if ("fitnessapps.acceltest.activity.AccelerometerService".equals(service.service.getClassName())) { 
-				 return true;
-			 }
-		 } 
-		 return false; 
-	 }
-	 
+	private boolean isAccelServiceRunning() {
+		ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+		for (RunningServiceInfo service : manager
+				.getRunningServices(Integer.MAX_VALUE)) {
+			if ("fitnessapps.acceltest.activity.AccelerometerService"
+					.equals(service.service.getClassName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	class RemoteServiceConnection implements ServiceConnection {
 		public void onServiceConnected(ComponentName className,
 				IBinder boundService) {
@@ -139,35 +153,35 @@ public abstract class Levels extends Activity implements SensorEventListener {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			Log.d(getClass().getSimpleName(), "onServiceConnected()");
+			//Log.d(getClass().getSimpleName(), "onServiceConnected()");
 		}
 
 		public void onServiceDisconnected(ComponentName className) {
-			
+
 			remoteService = null;
-			Log.d(getClass().getSimpleName(), "onServiceDisconnected");
+			//Log.d(getClass().getSimpleName(), "onServiceDisconnected");
 		}
-		
+
 		public void serviceAppendEndGame() {
-			try { 
-				 remoteService.setEndGameFlagFromService(true); 
-				 remoteService.setGameNameFromService(GAME_NAME + " Level: "
-							+ getLevelNumber());
-			 } catch (RemoteException e) { 
-				 // TODO Auto-generated catch block
-				 e.printStackTrace(); 
-			 }
+			try {
+				remoteService.setEndGameFlagFromService(true);
+				remoteService.setGameNameFromService(GAME_NAME + " Level: "
+						+ getLevelNumber());
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	};
 
 	/***************** End Remote Service ******************************/
 
 	public void setLevelNumber(int levelNum) {
-		level_number = levelNum;
+		GlobalState.level_number = levelNum;
 	}
 
-	private int getLevelNumber() {
-		return level_number;
+	public int getLevelNumber() {
+		return GlobalState.level_number;
 	}
 
 	private void setDirection(String newDirection) {
@@ -242,45 +256,42 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		return (azimuth > -135 && azimuth < -45);
 	}
 
-	public void onStop() {
-		unregisterListeners();
-		releaseService();
-		/*
-		 * try { writeAccelerationToSD(); } catch (IOException e) {
-		 * e.printStackTrace(); logFileWriteFailure(); }
-		 */
-
-		super.onStop();
+	@Override
+	protected void onResume() {
+		super.onResume();
+		initSound();
 	}
 
+	@Override
+	protected void onPause() {
+		super.onPause();
+		if (pool != null) {
+			pool.release();
+			pool = null;
+		}
+	}
+
+	@Override
+	protected void onStop() {
+		unregisterListeners();
+		stopTimer();
+		releaseService();
+	
+		super.onStop();
+	}
+	
 	private void unregisterListeners() {
 		try {
 			sensorManager.unregisterListener(this);
 		} catch (NullPointerException e) {
-			Log.e("UNREGISTER LISTENER",
-					"Null pointer during unregistering listener");
+			//Log.e("UNREGISTER LISTENER",
+			//		"Null pointer during unregistering listener");
 		}
 	}
 
-	/*
-	 * private void logFileWriteFailure() { Log.d("WRITEACCELEROMETER",
-	 * "File write failed"); }
-	 * 
-	 * private void writeAccelerationToSD() throws IOException { File sampleFile
-	 * = initAccelerationFile(); FileWriter fw = new FileWriter(sampleFile);
-	 * 
-	 * // fw.write("sessionStart_sessionEnd"); for (AccelerometerData data :
-	 * accelerationSamples) { fw.write(data.getX() + "_" + data.getY() + "_" +
-	 * data.getZ() + "\n"); } fw.close(); }
-	 * 
-	 * private File initAccelerationFile() throws IOException { File card =
-	 * Environment.getExternalStorageDirectory(); File directory = new
-	 * File(card.getAbsolutePath() + "/fishoutofwater/accelerometerdata"); File
-	 * sampleFile = new File(directory, "playerID_FishOutOfWater_Date_" +
-	 * getLevelNumber() + ".txt"); sampleFile.createNewFile();
-	 * 
-	 * return sampleFile; }
-	 */
+	private void stopTimer() {
+		countDownTimer.cancel();
+	}
 
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		// Must be implemented, but no functionality
@@ -303,15 +314,15 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	private void accelerometerHandler(SensorEvent event) {
 		for (int i = 0; i < 3; i++) {
 			valuesAccelerometer[i] = event.values[i];
-			addAccelerationSamples(event);
+			//addAccelerationSamples(event);
 
 			if (prev != null) {
 				AccelerometerData curr = new AccelerometerData(event.values[0],
 						event.values[1], event.values[2]);
 				if (isStep(prev, curr) && isObstacleCleared()) {
-					
+
 					updatePlayerSteps();
-					updateStepView(numOfSteps);
+					// updateStepView(numOfSteps);
 					if (getNumOfObstacles() > 0) {
 						checkObstacleEvent(numOfSteps);
 					}
@@ -330,12 +341,15 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	}
 
 	private void updatePlayerSteps() {
-		numOfSteps++; 
-		if ((countDownTimer.getSecondsRemaining() <= (countDownTimer.getSecondsStartedWith()/2)) 
-				&& numOfSteps < (winningSteps/2)) {
+		numOfSteps++;
+		int halfway = winningSteps / 2;
+		if ((countDownTimer.getSecondsRemaining() <= (countDownTimer
+				.getSecondsStartedWith() / 2))
+				&& numOfSteps < halfway) {
 			instrucTextView.setText("Hurry Up! You are behind the timer.");
-		}
-		else {
+		} else if (numOfSteps >= halfway) {
+			instrucTextView.setText("You're over halfway to Goldie! Keep walking!");
+		} else {
 			instrucTextView.setText(INSTRUCTIONS);
 		}
 	}
@@ -366,11 +380,13 @@ public abstract class Levels extends Activity implements SensorEventListener {
 			obstacleListener();
 		}
 
-		if (numOfSteps >= getNumOfStepsToWin() && !countDownTimer.isFinished()) {
-			levelCompleted();
-		} else {
-			if (countDownTimer.isFinished()) {
-				levelFailed();
+		if (!endOfLevel) {
+			if (numOfSteps >= getNumOfStepsToWin()
+					&& !countDownTimer.isFinished()) {
+				levelCompleted();
+			} else if (countDownTimer.isFinished()) {
+					levelFailed();
+				
 			}
 		}
 	}
@@ -379,11 +395,11 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	// --------------------------------------------
 
 	public void resetScore() {
-		score = 0;
+		GlobalState.score = 0;
 	}
 
 	public int getScore() {
-		return score;
+		return GlobalState.score;
 	}
 
 	private void vibrate() {
@@ -403,7 +419,7 @@ public abstract class Levels extends Activity implements SensorEventListener {
 	public void setTextViews(TextView timerView, TextView stepsView,
 			TextView instrucView) {
 		timerTextView = timerView;
-		stepView = stepsView;
+		// stepView = stepsView;
 		instrucTextView = instrucView;
 	}
 
@@ -430,48 +446,77 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		turnRight = pool.load(this, R.raw.turn_right, 1);
 		turnLeft = pool.load(this, R.raw.turn_left, 1);
 		turnAround = pool.load(this, R.raw.turn_around, 1);
+		walkPrompt = pool.load(this, R.raw.walk_prompt, 1);
 	}
 
 	public void levelCompleted() {
 		pool.play(endSplash, 1, 1, 1, 0, 1);
 		pool.play(crowdCheer, 1, 1, 1, 0, 1);
-		score += getPointsForLevel();
-		onStop();
+		GlobalState.score += pointsForLevel;
+		if (getLevelNumber() == LAST_LEVEL) {
+			isLastLevel = true;
+		}
+		endOfLevel = true;
+		this.onStop();
+		setLevelNumber(getLevelNumber() + 1);
+		showEndOfLevelAlert(true, isLastLevel);
 	}
 
 	public void levelFailed() {
 		pool.play(loseBuzz, 1, 1, 1, 0, 1);
 		vibrate();
-		onStop();
+		endOfLevel = true;
+		this.onStop();
+		showEndOfLevelAlert(false, false);
 	}
 
-	public void initAnimation(final View view, Button startBtn) {
+	public void showEndOfLevelAlert(boolean completed, final boolean isLast) {
+		AlertDialog.Builder alertBox = new AlertDialog.Builder(this);
+		if (completed && !isLast) {
+			alertBox.setMessage("Hooray! You saved Goldie! You have "
+					+ getScore() + " points! Time to move to Level "
+					+ getLevelNumber() + ".");
+		} else if (completed && isLast) {
+			alertBox.setMessage("Congratulations! You have " + getScore()
+					+ " points! You cleared every level!");
+		} else {
+			alertBox.setMessage("You didnt catch Goldie fast enough! Try again!");
+		}
+		alertBox.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialogInterface, int arg1) {
+				if (isLast) {
+					// finish();
+					startActivity(getIntroIntent());
+				} else {
+					startActivity(getCurrentIntent());
+				}
+				dialogInterface.cancel();
+			}
+		});
+		alertBox.show();
+	}
+
+	public void initAnimation(Button startBtn) {
 
 		startButton = startBtn;
 
-		final CustomAnimationDrawable cad = new CustomAnimationDrawable(
-				(AnimationDrawable) getResources().getDrawable(
-						getAnimationDrawable())) {
-			@Override
-			public void onAnimationFinish() {
-				// img.setVisibility(View.GONE);
-				view.setBackgroundDrawable(getResources().getDrawable(
-						R.drawable.wood_floor_wet));
-				gameStart(); // starts game
-			}
-		};
 
 		startButton.setOnClickListener(new Button.OnClickListener() {
 
-			public void onClick(View arg0) {
-				view.setBackgroundDrawable(cad);
-				cad.setOneShot(true);
-				if (!cad.isRunning()) {
+			public void onClick(View arg0) { /*
+				currentView.setBackgroundDrawable(introCad);
+				introCad.setOneShot(true);
+				if (!introCad.isRunning()) {
 					// Start the animation
-					cad.start();
+					introCad.start();
 					pool.play(beginSplash, 1, 1, 1, 0, 1);
 					startButton.setVisibility(View.GONE);
-				}
+				} */
+				currentView.setBackgroundDrawable(getResources().getDrawable(
+						R.drawable.wood_floor_wet));
+				//currentView.getBackground().setCallback(null);
+				startButton.setVisibility(View.GONE);
+				gameStart(); // starts game
 			}
 		});
 
@@ -500,8 +545,7 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		isObstacleCleared = true;
 		preObstacleDir = "";
 		obstacleSelected = 0;
-		instrucTextView.setText("");
-		instrucTextView.setVisibility(View.GONE);
+		instrucTextView.setText(INSTRUCTIONS);
 	}
 
 	private void obstacleListener() {
@@ -562,13 +606,13 @@ public abstract class Levels extends Activity implements SensorEventListener {
 
 	private boolean playerTurnLeft(String prevDirection) {
 		boolean turnedLeft = false;
-		if (prevDirection.equals(NORTH) && getCurrDirection().equals(WEST)
-				|| prevDirection.equals(SOUTH)
-				&& getCurrDirection().equals(EAST)
-				|| prevDirection.equals(EAST)
-				&& getCurrDirection().equals(NORTH)
-				|| prevDirection.equals(WEST)
-				&& getCurrDirection().equals(SOUTH)) {
+		if ((prevDirection.equals(NORTH) && getCurrDirection().equals(WEST))
+				|| (prevDirection.equals(SOUTH) && getCurrDirection().equals(
+						EAST))
+				|| (prevDirection.equals(EAST) && getCurrDirection().equals(
+						NORTH))
+				|| (prevDirection.equals(WEST) && getCurrDirection().equals(
+						SOUTH))) {
 			turnedLeft = true;
 		}
 		return turnedLeft;
@@ -576,13 +620,13 @@ public abstract class Levels extends Activity implements SensorEventListener {
 
 	private boolean playerTurnRight(String prevDirection) {
 		boolean turnedRight = false;
-		if (prevDirection.equals(NORTH) && getCurrDirection().equals(EAST)
-				|| prevDirection.equals(SOUTH)
-				&& getCurrDirection().equals(WEST)
-				|| prevDirection.equals(EAST)
-				&& getCurrDirection().equals(SOUTH)
-				|| prevDirection.equals(WEST)
-				&& getCurrDirection().equals(NORTH)) {
+		if ((prevDirection.equals(NORTH) && getCurrDirection().equals(EAST))
+				|| (prevDirection.equals(SOUTH) && getCurrDirection().equals(
+						WEST))
+				|| (prevDirection.equals(EAST) && getCurrDirection().equals(
+						SOUTH))
+				|| (prevDirection.equals(WEST) && getCurrDirection().equals(
+						NORTH))) {
 			turnedRight = true;
 		}
 		return turnedRight;
@@ -590,13 +634,13 @@ public abstract class Levels extends Activity implements SensorEventListener {
 
 	private boolean playerTurnAround(String prevDirection) {
 		boolean turnedAround = false;
-		if (prevDirection.equals(NORTH) && getCurrDirection().equals(SOUTH)
-				|| prevDirection.equals(SOUTH)
-				&& getCurrDirection().equals(NORTH)
-				|| prevDirection.equals(EAST)
-				&& getCurrDirection().equals(WEST)
-				|| prevDirection.equals(WEST)
-				&& getCurrDirection().equals(EAST)) {
+		if ((prevDirection.equals(NORTH) && getCurrDirection().equals(SOUTH))
+				|| (prevDirection.equals(SOUTH) && getCurrDirection().equals(
+						NORTH))
+				|| (prevDirection.equals(EAST) && getCurrDirection().equals(
+						WEST))
+				|| (prevDirection.equals(WEST) && getCurrDirection().equals(
+						EAST))) {
 			turnedAround = true;
 		}
 		return turnedAround;
@@ -608,9 +652,10 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		return pickedNumber;
 	}
 
-	public void updateStepView(int steps) {
-		stepView.setText("Steps: " + steps);
-	}
+	/*
+	 * public void updateStepView(int steps) { stepView.setText("Steps: " +
+	 * steps); }
+	 */
 
 	private boolean isObstacleCleared() {
 		return isObstacleCleared;
@@ -636,19 +681,47 @@ public abstract class Levels extends Activity implements SensorEventListener {
 		return winningSteps;
 	}
 
-	public void setPointsForLevel(int points) {
-		pointsForLevel = points;
-	}
-
-	private int getPointsForLevel() {
-		return pointsForLevel;
-	}
-
 	@Override
 	public void onBackPressed() {
-		unregisterListeners();
-		Intent goBack = new Intent(this, StartGameActivity.class);
-		startActivity(goBack);
+		if (countDownTimer.getSecondsRemaining() >= 0) {
+			this.onStop();
+			startActivity(getCurrentIntent());
+		} else {
+			unregisterListeners();
+			GlobalState.score -= pointsForLevel;
+			if (getLevelNumber() > 1) {
+				setLevelNumber(getLevelNumber() - 1);
+			}
+			startActivity(getPreviousIntent());
+		}
+	}
+
+	public void setCurrentIntent(Intent currIntent) {
+		currentIntent = currIntent;
+	}
+
+	private Intent getCurrentIntent() {
+		return currentIntent;
+	}
+
+	public void setPreviousIntent(Intent prevIntent) {
+		previousIntent = prevIntent;
+	}
+
+	private Intent getPreviousIntent() {
+		return previousIntent;
+	}
+
+	public void setIntroIntent(Intent newIntent) {
+		introIntent = newIntent;
+	}
+
+	private Intent getIntroIntent() {
+		return introIntent;
+	}
+
+	public void setLevelView(View view) {
+		currentView = view;
 	}
 
 }
